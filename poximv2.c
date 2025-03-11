@@ -15,18 +15,17 @@ uint8_t writefile(FILE *, uint8_t *, char *);
 
 int main(int argc, char *argv[])
 {
-	/* name of program, input.hex and output.out */
 	char *prog, *arq1, *arq2;
 	FILE *input, *output;
 	uint8_t memory[MAX_MEMORY];
 
-	prog = argv[0];
+	prog = argv[0]; /* program name */
 	if (argc != 3) {
 		fprintf(stderr, "Usage: %s input.hex output.out\n", prog);
 		exit(10);
 	}
-	arq1 = argv[1];
-	arq2 = argv[2];
+	arq1 = argv[1];	/* input file name */
+	arq2 = argv[2];	/* output file name */
 	if ((input = fopen(arq1, "r")) == NULL) {
 		fprintf(stderr, "%s: can't open %s\n", prog, arq1);
 		exit(20);
@@ -75,19 +74,53 @@ uint8_t readfile(FILE *input, uint8_t memory[], char *prog, char *arq1)
 }
 
 struct CSR {
-	char *x_label;
+	const char *x_label;
 	uint32_t x;
 } csr[] = {
-	"mstatus", 0,
-	"mie",	0,
-	"mtvec", 0,
-	"mepc", 0,
-	"mcause", 0,
-	"mtval", 0,
-	"mip", 0
+	{ "mstatus", 0 },
+	{ "mie", 0 },
+	{ "mtvec", 0 },
+	{ "mepc", 0 },
+	{ "mcause", 0 },
+	{ "mtval", 0 },
+	{ "mip", 80 }
 };
-uint32_t x[32] = { 0 };
-const char *x_label[32] = { "zero", "ra", "sp", "gp", "tp", "t0", "t1", "t2", "s0", "s1", "a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", "s10", "s11", "t3", "t4", "t5", "t6" };
+struct REGISTERS {
+	const char *x_label;
+	uint32_t x;
+} rg[] = {
+	{ "zero", 0 },
+	{ "ra", 0 },
+	{ "sp", 0 },
+	{ "gp", 0 },
+	{ "tp", 0 },
+	{ "t0", 0 },
+	{ "t1", 0 },
+	{ "t2", 0 },
+	{ "s0", 0 },
+	{ "s1", 0 },
+	{ "a0", 0 },
+	{ "a1", 0x80200000 },
+	{ "a2", 0x00001028 },
+	{ "a3", 0 },
+	{ "a4", 0 },
+	{ "a5", 0 },
+	{ "a6", 0 },
+	{ "a7", 0 },
+	{ "s2", 0 },
+	{ "s3", 0 },
+	{ "s4", 0 },
+	{ "s5", 0 },
+	{ "s6", 0 },
+	{ "s7", 0 },
+	{ "s8", 0 },
+	{ "s9", 0 },
+	{ "s10", 0 },
+	{ "s11", 0 },
+	{ "t3", 0 },
+	{ "t4", 0 },
+	{ "t5", 0 },
+	{ "t6", 0 };
 const uint32_t OFFSET = 0x80000000;
 
 #define GET_RD(instruction) ((instruction >> 7) & 0x1F)
@@ -98,118 +131,107 @@ const uint32_t OFFSET = 0x80000000;
 
 /* R instructions */
 void add(const uint8_t rd, const uint8_t rs1, const uint8_t rs2, uint32_t pc, FILE *output) {
-	fprintf(output, "0x%08x:add %s,%s,%s %s=0x%08x+0x%08x=", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2]);
+	fprintf(output, "0x%08x:add %s,%s,%s %s=0x%08x+0x%08x=0x%08x\n", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2], x[rs1]+x[rs2]);
 	x[rd] = x[rs1] + x[rs2];
-	fprintf(output, "0x%08x\n", x[rd]);
 }
 void sub(const uint8_t rd, const uint8_t rs1, const uint8_t rs2, uint32_t pc, FILE *output) {
-	fprintf(output, "0x%08x:sub %s,%s,%s %s=0x%08x-0x%08x=", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2]);
+	fprintf(output, "0x%08x:sub %s,%s,%s %s=0x%08x-0x%08x=0x%08x\n", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2], x[rs1] - x[rs2]);
 	x[rd] = x[rs1] - x[rs2];
-	fprintf(output, "0x%08x\n", x[rd]);
 }
 void xor(const uint8_t rd, const uint8_t rs1, const uint8_t rs2, uint32_t pc, FILE *output) {
-	fprintf(output, "0x%08x:xor %s,%s,%s %s=0x%08x^0x%08x=", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2]);
+	fprintf(output, "0x%08x:xor %s,%s,%s %s=0x%08x^0x%08x=0x%08x\n", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2], x[rs1] ^ x[rs2]);
 	x[rd] = x[rs1] ^ x[rs2];
-	fprintf(output, "0x%08x\n", x[rd]);
 }
 void or(const uint8_t rd, const uint8_t rs1, const uint8_t rs2, uint32_t pc, FILE *output) {
-	fprintf(output, "0x%08x:or  %s,%s,%s %s=0x%08x|0x%08x=", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2]);
+	fprintf(output, "0x%08x:or  %s,%s,%s %s=0x%08x|0x%08x=0x%08x\n", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2], x[rs1] | x[rs2]);
 	x[rd] = x[rs1] | x[rs2];
-	fprintf(output, "0x%08x\n", x[rd]);
 }
 void and(const uint8_t rd, const uint8_t rs1, const uint8_t rs2, uint32_t pc, FILE *output) {
-	fprintf(output, "0x%08x:and %s,%s,%s %s=0x%08x&0x%08x=", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2]);
+	fprintf(output, "0x%08x:and %s,%s,%s %s=0x%08x&0x%08x=0x%08x\n", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2],  x[rs1] & x[rs2]);
 	x[rd] = x[rs1] & x[rs2];
-	fprintf(output, "0x%08x\n", x[rd]);
 }
 void sll(const uint8_t rd, const uint8_t rs1, const uint8_t rs2, uint32_t pc, FILE *output) {
-	fprintf(output, "0x%08x:sll %s,%s,%s %s=0x%08x<<%d=", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2] & 0x1F);
+	fprintf(output, "0x%08x:sll %s,%s,%s %s=0x%08x<<%d=0x%08x\n", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2] & 0x1F, x[rs1] << x[rs2]);
 	x[rd] = x[rs1] << x[rs2];
-	fprintf(output, "0x%08x\n", x[rd]);
 }
 void srl(const uint8_t rd, const uint8_t rs1, const uint8_t rs2, uint32_t pc, FILE *output) {
-	fprintf(output, "0x%08x:srl %s,%s,%s %s=0x%08x>>%u=", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2] & 0x1f);
+	fprintf(output, "0x%08x:srl %s,%s,%s %s=0x%08x>>%u=0x%08x\n", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2] & 0x1f, x[rs1] >> x[rs2]);
 	x[rd] = x[rs1] >> x[rs2];
-	fprintf(output, "0x%08x\n", x[rd]);
 }
 void sra(const uint8_t rd, const uint8_t rs1, const uint8_t rs2, uint32_t pc, FILE *output) {
-	fprintf(output, "0x%08x:sra %s,%s,%s %s=0x%08x>>>%u=", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2] & 0x1f);
+	fprintf(output, "0x%08x:sra %s,%s,%s %s=0x%08x>>>%u=0x%08x\n", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2] & 0x1f, (int32_t)x[rs1] >> x[rs2]);
 	x[rd] = (int32_t)x[rs1] >> x[rs2];
-	fprintf(output, "0x%08x\n", x[rd]);
 }
 void slt(const uint8_t rd, const uint8_t rs1, const uint8_t rs2, uint32_t pc, FILE *output) {
-	fprintf(output, "0x%08x:slt %s,%s,%s %s=(0x%08x<0x%08x)=", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2]);
+	fprintf(output, "0x%08x:slt %s,%s,%s %s=(0x%08x<0x%08x)=%u\n", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2], ((int32_t)x[rs1]) < ((int32_t)x[rs2]) ? 1 : 0);
 	x[rd] = ((int32_t)x[rs1]) < ((int32_t)x[rs2]) ? 1 : 0;
-	fprintf(output, "%u\n", x[rd]);
 }
 void sltu(const uint8_t rd, const uint8_t rs1, const uint8_t rs2, uint32_t pc, FILE *output) {
-	fprintf(output, "0x%08x:sltu %s,%s,%s %s=(0x%08x<0x%08x)=", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2]);
+	fprintf(output, "0x%08x:sltu %s,%s,%s %s=(0x%08x<0x%08x)=%u\n", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2], (x[rs1] < x[rs2]) ? 1 : 0);
 	x[rd] = (x[rs1] < x[rs2]) ? 1 : 0;
-	fprintf(output, "%u\n", x[rd]);
 }
 
 void mul(uint8_t rd, uint8_t rs1, uint8_t rs2, uint32_t pc, FILE *output)
 {
-	fprintf(output, "0x%08x:mul %s,%s,%s %s=0x%08x*0x%08x=", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2]);
+	fprintf(output, "0x%08x:mul %s,%s,%s %s=0x%08x*0x%08x=0x%08x\n", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2], (x[rs1] * x[rs2]) & 0xFFFFFFFF);
 	x[rd] = (x[rs1] * x[rs2]) & 0xFFFFFFFF;
-	fprintf(output, "0x%08x\n",x[rd]);
 }
 void mulh(uint8_t rd, uint8_t rs1, uint8_t rs2, uint32_t pc, FILE *output)
 {
-	fprintf(output, "0x%08x:mulh %s,%s,%s %s=0x%08x*0x%08x=", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2]);
 	int64_t result = ((int64_t)(int32_t)x[rs1]) * ((int64_t)(int32_t)x[rs2]);
+	fprintf(output, "0x%08x:mulh %s,%s,%s %s=0x%08x*0x%08x=0x%08x\n", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2], (int32_t)result >> 32);
 	x[rd] = (int32_t)(result >> 32);
-	fprintf(output, "0x%08x\n",x[rd]);
 }
 void mulsu(uint8_t rd, uint8_t rs1, uint8_t rs2, uint32_t pc, FILE *output)
 {
-	fprintf(output, "0x%08x:mulhsu %s,%s,%s %s=0x%08x*0x%08x=", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2]);
 	int64_t result = ((int64_t)(int32_t)x[rs1]) * ((uint64_t)x[rs2]);
+	fprintf(output, "0x%08x:mulhsu %s,%s,%s %s=0x%08x*0x%08x=0x%08x\n", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2], (int32_t)(result >> 32));
 	x[rd] = (int32_t)(result >> 32);
-	fprintf(output, "0x%08x\n",x[rd]);
 }
 void mulu(uint8_t rd, uint8_t rs1, uint8_t rs2, uint32_t pc, FILE *output)
 {
-	fprintf(output, "0x%08x:mulhu %s,%s,%s %s=0x%08x*0x%08x=", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2]);
 	int64_t result = (((uint64_t)(x[rs1])) * ((uint64_t)(x[rs2]))) >> 32;
+	fprintf(output, "0x%08x:mulhu %s,%s,%s %s=0x%08x*0x%08x=0x%08x\n", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2], result & 0xFFFFFFFF);
 	x[rd] = result & 0xFFFFFFFF;
-	fprintf(output, "0x%08x\n",x[rd]);
 }
 void divr(uint8_t rd, uint8_t rs1, uint8_t rs2, uint32_t pc, FILE *output)
-{
-	fprintf(output, "0x%08x:div %s,%s,%s %s=0x%08x/0x%08x=", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2]);
+{	int32_t result;
 	if (x[rs2] != 0)
-		x[rd] = (((int32_t)x[rs1]) / ((int32_t)x[rs2]));
+		result = (((int32_t)x[rs1]) / ((int32_t)x[rs2]));
 	else
-		x[rd] = 0xFFFFFFFF;
-	fprintf(output, "0x%08x\n",x[rd]);
+		result = 0xFFFFFFFF;
+	fprintf(output, "0x%08x:div %s,%s,%s %s=0x%08x/0x%08x=0x%08x\n", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2], result);
+	x[rd] = result;
 }
 void divu(uint8_t rd, uint8_t rs1, uint8_t rs2, uint32_t pc, FILE *output)
 {
-	fprintf(output, "0x%08x:divu %s,%s,%s %s=0x%08x/0x%08x=", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2]);
+	int32_t result;
 	if (x[rs2] != 0)
-		x[rd] = x[rs1] / (x[rs2]);
+		result = x[rs1] / (x[rs2]);
 	else
-		x[rd] = 0xFFFFFFFF;
-	fprintf(output, "0x%08x\n",x[rd]);
+		result = 0xFFFFFFFF;
+	fprintf(output, "0x%08x:divu %s,%s,%s %s=0x%08x/0x%08x=0x%08x\n", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2], result);
+	x[rd] = result;
 }
 void rem(uint8_t rd, uint8_t rs1, uint8_t rs2, uint32_t pc, FILE *output)
 {
-	fprintf(output, "0x%08x:rem %s,%s,%s %s=0x%08x%%0x%08x=", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2]);
+	int32_t result
 	if (x[rs2] != 0)
-		x[rd] = ((int32_t)x[rs1]) % ((int32_t)x[rs2]);
+		result = ((int32_t)x[rs1]) % ((int32_t)x[rs2]);
 	else
-		x[rd] = x[rs1];
-	fprintf(output, "0x%08x\n",x[rd]);
+		result = x[rs1];
+	fprintf(output, "0x%08x:rem %s,%s,%s %s=0x%08x%%0x%08x=0x%08x\n", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2], result);
+	x[rd] = result;
 }
 void remu(uint8_t rd, uint8_t rs1, uint8_t rs2, uint32_t pc, FILE *output)
 {
-	fprintf(output, "0x%08x:remu %s,%s,%s %s=0x%08x%%0x%08x=", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2]);
+	int32_t result
 	if (x[rs2] != 0)
-		x[rd] = x[rs1] % x[rs2];
+		result = x[rs1] % x[rs2];
 	else
-		x[rd] = x[rs1];
-	fprintf(output, "0x%08x\n",x[rd]);
+		result = x[rs1];
+	fprintf(output, "0x%08x:remu %s,%s,%s %s=0x%08x%%0x%08x=0x%08x\n", pc, x_label[rd], x_label[rs1], x_label[rs2], x_label[rd], x[rs1], x[rs2], result);
+	x[rd] = result;
 }
 
 
@@ -310,58 +332,48 @@ void R(FILE *output, const uint32_t instruction, uint8_t memory[], uint32_t pc, 
 		default:
 			status = ERROR;
 			break;
-	}
+		}
 	}
 	if (status == ERROR) {
 		fprintf(stderr, "unknown R:%x\n", instruction);
-		exit(101);
 	}
 }
 
 void addi(FILE *output, const uint8_t rd, const uint8_t rs1, const int32_t simm, uint32_t pc) {
-	fprintf(output, "0x%08x:addi %s,%s,0x%03x %s=0x%08x+0x%08x=", pc, x_label[rd], x_label[rs1], simm & 0xFFF, x_label[rd], x[rs1], simm);
+	fprintf(output, "0x%08x:addi %s,%s,0x%03x %s=0x%08x+0x%08x=0x%08x\n", pc, x_label[rd], x_label[rs1], simm & 0xFFF, x_label[rd], x[rs1], simm, x[rs1] + simm);
 	x[rd] = x[rs1] + simm;
-	fprintf(output, "0x%08x\n", x[rd]);
 }
 void xori(FILE *output, const uint8_t rd, const uint8_t rs1, const int32_t simm, uint32_t pc) {
-	fprintf(output, "0x%08x:xori %s,%s,0x%03x %s=0x%08x^0x%08x=", pc, x_label[rd], x_label[rs1], simm & 0xFFF, x_label[rd], x[rs1], simm);
+	fprintf(output, "0x%08x:xori %s,%s,0x%03x %s=0x%08x^0x%08x=0x%08x\n", pc, x_label[rd], x_label[rs1], simm & 0xFFF, x_label[rd], x[rs1], simm, x[rs1] ^ simm);
 	x[rd] = x[rs1] ^ simm;
-	fprintf(output, "0x%08x\n", x[rd]);
 }
 void ori(FILE *output, const uint8_t rd, const uint8_t rs1, const int32_t simm, uint32_t pc) {
-	fprintf(output, "0x%08x:ori %s,%s,0x%03x %s=0x%08x|0x%08x=", pc, x_label[rd], x_label[rs1], simm & 0xFFF, x_label[rd], x[rs1], simm);
+	fprintf(output, "0x%08x:ori %s,%s,0x%03x %s=0x%08x|0x%08x=0x%08x\n", pc, x_label[rd], x_label[rs1], simm & 0xFFF, x_label[rd], x[rs1], simm, x[rs1] | simm);
 	x[rd] = x[rs1] | simm;
-	fprintf(output, "0x%08x\n", x[rd]);
 }
 void andi(FILE *output, const uint8_t rd, const uint8_t rs1, const int32_t simm, uint32_t pc) {
-	fprintf(output, "0x%08x:andi %s,%s,0x%03x %s=0x%08x&0x%08x=", pc, x_label[rd], x_label[rs1], simm & 0xFFF, x_label[rd], x[rs1], simm);
+	fprintf(output, "0x%08x:andi %s,%s,0x%03x %s=0x%08x&0x%08x=0x%08x\n", pc, x_label[rd], x_label[rs1], simm & 0xFFF, x_label[rd], x[rs1], simm, x[rs1] & simm);
 	x[rd] = x[rs1] & simm;
-	fprintf(output, "0x%08x\n", x[rd]);
 }
 void slli(FILE *output, const uint8_t rd, const uint8_t rs1, const int8_t imm5, uint32_t pc) {
-	fprintf(output, "0x%08x:slli %s,%s,%u %s=0x%08x<<%u=", pc, x_label[rd], x_label[rs1], imm5, x_label[rd], x[rs1], imm5);
+	fprintf(output, "0x%08x:slli %s,%s,%u %s=0x%08x<<%u=0x%08x\n", pc, x_label[rd], x_label[rs1], imm5, x_label[rd], x[rs1], imm5, x[rs1] << imm5);
 	x[rd] = x[rs1] << imm5;
-	fprintf(output, "0x%08x\n", x[rd]);
 }
 void srli(FILE *output, const uint8_t rd, const uint8_t rs1, const int8_t imm5, uint32_t pc) {
-	fprintf(output, "0x%08x:srli %s,%s,%u %s=0x%08x>>%u=", pc, x_label[rd], x_label[rs1], imm5, x_label[rd], x[rs1], imm5);
+	fprintf(output, "0x%08x:srli %s,%s,%u %s=0x%08x>>%u=0x%08x\n", pc, x_label[rd], x_label[rs1], imm5, x_label[rd], x[rs1], imm5, x[rs1] >> imm5);
 	x[rd] = x[rs1] >> imm5;
-	fprintf(output, "0x%08x\n", x[rd]);
 }
 void srai(FILE *output, const uint8_t rd, const uint8_t rs1, const int8_t imm5, uint32_t pc) {
-	fprintf(output, "0x%08x:srai %s,%s,%u %s=0x%08x>>>%u=", pc, x_label[rd], x_label[rs1], imm5, x_label[rd], x[rs1], imm5);
+	fprintf(output, "0x%08x:srai %s,%s,%u %s=0x%08x>>>%u=0x%08x\n", pc, x_label[rd], x_label[rs1], imm5, x_label[rd], x[rs1], imm5, (int32_t)x[rs1] >> imm5);
 	x[rd] = (int32_t)x[rs1] >> imm5;
-	fprintf(output, "0x%08x\n", x[rd]);
 }
 void slti(FILE *output, const uint8_t rd, const uint8_t rs1, const int32_t simm, uint32_t pc) {
-	fprintf(output, "0x%08x:slti %s,%s,0x%03x %s=(0x%08x<0x%08x)=", pc, x_label[rd], x_label[rs1], simm & 0xFFF, x_label[rd], x[rs1], simm);
+	fprintf(output, "0x%08x:slti %s,%s,0x%03x %s=(0x%08x<0x%08x)=u\n", pc, x_label[rd], x_label[rs1], simm & 0xFFF, x_label[rd], x[rs1], simm, ((int32_t)x[rs1]) < ((int32_t)simm) ? 1 : 0);
 	x[rd] = ((int32_t)x[rs1]) < ((int32_t)simm) ? 1 : 0;
-	fprintf(output, "%u\n", x[rd]);
 }
 void sltiu(FILE *output, const uint8_t rd, const uint8_t rs1, const int32_t simm, uint32_t pc) {
-	fprintf(output, "0x%08x:sltiu %s,%s,0x%03x %s=(0x%08x<0x%08x)=", pc, x_label[rd], x_label[rs1], simm & 0xFFF, x_label[rd], x[rs1], simm);
+	fprintf(output, "0x%08x:sltiu %s,%s,0x%03x %s=(0x%08x<0x%08x)=%u\n", pc, x_label[rd], x_label[rs1], simm & 0xFFF, x_label[rd], x[rs1], simm, x[rs1] < ((uint32_t)simm) ? 1 : 0);
 	x[rd] = x[rs1] < ((uint32_t)simm) ? 1 : 0;
-	fprintf(output, "%u\n", x[rd]);
 }
 
 void Iimm(FILE *output, const uint32_t instruction, const uint8_t funct3, const uint8_t rd, const uint8_t rs1, const int16_t imm, uint32_t pc, char *prog)
@@ -410,61 +422,86 @@ void Iimm(FILE *output, const uint32_t instruction, const uint8_t funct3, const 
 	if (status == ERROR)
 		fprintf(stderr, "%s: unknown I instruction %x\n", prog, instruction);
 }
-
+// factoring fprintf functions, the priority is read! I stopped here
 void lb(FILE *output, uint8_t memory[], const uint8_t rd, const uint8_t rs1, const int32_t simm, uint32_t pc) {
 	uint16_t posi = x[rs1]+simm-OFFSET;
-	if (posi <= MAX_MEMORY && posi >= 0) {
+	if (posi < MAX_MEMORY && posi >= 0) {
 		x[rd] = (int8_t)(memory[posi]);
 		fprintf(output, "0x%08x:lb %s,0x%03x(%s) %s=mem[0x%08x]=0x%08x\n", pc, x_label[rd], simm, x_label[rs1], x_label[rd], posi+OFFSET, x[rd]);
 	} else printf("lb out of memory\n");
 }
 void lh(FILE *output, uint8_t memory[], const uint8_t rd, const uint8_t rs1, const int32_t simm, uint32_t pc) {
 	uint16_t posi = x[rs1]+simm-OFFSET;
-	if (posi <= MAX_MEMORY-2 && posi >= 0) {
+	if (posi < MAX_MEMORY-2 && posi >= 0) {
 		x[rd] = ((int16_t *)(memory+posi))[0];
 		fprintf(output, "0x%08x:lh	%s,0x%03x(%s)	%s=mem[0x%08x]=0x%08x\n", pc, x_label[rd], simm, x_label[rs1], x_label[rd], posi+OFFSET, x[rd]);
 	} else printf("lh out of memory\n");
 }
 void lw(FILE *output, uint8_t memory[], const uint8_t rd, const uint8_t rs1, const int32_t simm, uint32_t pc) {
 	uint16_t posi = x[rs1]+simm-OFFSET;
-	if (posi <= MAX_MEMORY-4 && posi >= 0) {
+	if (posi % 4 != 0)
+		printf("achei borra\n");
+	if (posi < MAX_MEMORY-4 && posi >= 0) {
 		x[rd] = ((int32_t *)(memory+posi))[0];
 		fprintf(output, "0x%08x:lw %s,0x%03x(%s) %s=mem[0x%08x]=0x%08x\n", pc, x_label[rd], simm & 0xFFF, x_label[rs1], x_label[rd], posi+OFFSET, x[rd]);
 	} else printf("lw out of memory\n");
 }
 void lbu(FILE *output, uint8_t memory[], const uint8_t rd, const uint8_t rs1, const int32_t simm, uint32_t pc) {
 	uint16_t posi = x[rs1]+simm-OFFSET;
-	if (posi <= MAX_MEMORY && posi >= 0) {
+	if (posi < MAX_MEMORY && posi >= 0) {
 		x[rd] = memory[posi] & 0xFF;
 		fprintf(output, "0x%08x:lbu %s,0x%03x(%s) %s=mem[0x%08x]=0x%08x\n", pc, x_label[rd], simm, x_label[rs1], x_label[rd], posi+OFFSET, x[rd]);
 	} else printf("lbu out of memory\n");
 }
 void lhu(FILE *output, uint8_t memory[], const uint8_t rd, const uint8_t rs1, const int32_t simm, uint32_t pc) {
 	uint16_t posi = x[rs1]+simm-OFFSET;
-	if (posi <= MAX_MEMORY-2 && posi >= 0) { 
+	if (posi < MAX_MEMORY-2 && posi >= 0) { 
 		x[rd] = (uint32_t)(((uint16_t *)(memory+posi))[0]);
 		fprintf(output, "0x%08x:lhu	%s,0x%03x(%s)	%s=mem[0x%08x]=0x%08x\n", pc, x_label[rd], simm, x_label[rs1], x_label[rd], posi+OFFSET, x[rd]);
 	} else printf("lhu out of memory\n");
 }
-void Iload(FILE *output, const uint32_t instruction, const uint8_t funct3, uint8_t memory[], const uint8_t rd, const uint8_t rs1, const int16_t imm, uint32_t pc, char *prog)
+void Iload(FILE *output, const uint32_t instruction, const uint8_t funct3, uint8_t memory[], const uint8_t rd, const uint8_t rs1, const int16_t imm, uint32_t *pc, char *prog)
 {
 	const int32_t simm = (imm >> 11) ? 0xFFFFF000 | imm : imm;
-	
+	if (imm % 4  != 0){
+			//mstatus
+			csr[0].x = 0x00001800;
+			//mcause
+			csr[4].x = 0x2;
+			// *pc = mtvec
+			*pc = csr[2].x - 4;
+			fprintf(output, ">exception:illegal_instruction cause=0x%08x,epc=0x%08x,tval=0x%08x\n", csr[4].x, csr[3].x, csr[5].x);
+			//tval = imm
+			csr[5].x = simm;
+			return;
+	}
+	if (rd == 0 || rs1 == 0) {	
+			//mstatus
+			csr[0].x = 0x00001800;
+			//mcause
+			csr[4].x = 0x2;
+			// *pc = mtvec
+			*pc = csr[2].x - 4;
+			fprintf(output, ">exception:load_fault cause=0x%08x,epc=0x%08x,tval=0x%08x\n", csr[4].x, csr[3].x, csr[5].x);
+			//tval = imm
+			csr[5].x = simm;
+			return;
+	} 
 	switch (funct3) {
-		case 0x0:
-			lb(output, memory, rd, rs1, simm, pc);
+		case 0x0:			
+			lb(output, memory, rd, rs1, simm, *pc);
 			break;
-		case 0x1:
-			lh(output, memory, rd, rs1, simm, pc);
+		case 0x1:	
+			lh(output, memory, rd, rs1, simm, *pc);
 			break;
 		case 0x2:
-			lw(output, memory, rd, rs1, simm, pc);
+			lw(output, memory, rd, rs1, simm, *pc);
 			break;
-		case 0x4:
-			lbu(output, memory, rd, rs1, simm, pc);
+		case 0x4:	
+			lbu(output, memory, rd, rs1, simm, *pc);
 			break;
-		case 0x5:
-			lhu(output, memory, rd, rs1, simm, pc);
+		case 0x5:	
+			lhu(output, memory, rd, rs1, simm, *pc);
 			break;
 		default:
 			fprintf(stderr, "%s: unknown I instruction %x\n", prog, instruction);
@@ -473,10 +510,10 @@ void Iload(FILE *output, const uint32_t instruction, const uint8_t funct3, uint8
 }
 
 void jarl(FILE *output, const uint8_t rd, const uint8_t rs1, const int32_t simm, uint32_t *pc) {
-	uint32_t instAdress = *pc;
+	uint32_t aux = x[rs1];
+	fprintf(output, "0x%08x:jalr %s,%s,0x%03x pc=0x%08x+0x%08x,%s=0x%08x\n", *pc, x_label[rd], x_label[rs1], simm, x[rs1], simm, x_label[rd], *pc+4);
 	x[rd] = *pc + 4;
 	*pc = x[rs1] + simm;
-	fprintf(output, "0x%08x:jalr %s,%s,0x%03x pc=0x%08x+0x%08x,%s=0x%08x\n", instAdress, x_label[rd], x_label[rs1], simm, x[rs1], simm, x_label[rd], x[rd]);
 	*pc -= 4;
 }
 void Ijump(FILE *output, const uint32_t instruction, const uint8_t funct3, const uint8_t rd, const uint8_t rs1, const int16_t imm, uint32_t *pc, char *prog)
@@ -517,48 +554,54 @@ uint16_t getcsr(uint16_t csr_index)
 			return -1;
 	}
 }
-void csrrw(FILE *output, const uint8_t rd, const uint8_t rs1, uint16_t c, uint32_t *pc)
+void csrrw(FILE *output, const uint8_t rd, const uint8_t rs1, uint16_t c, uint32_t pc)
 {
 	uint32_t aux = x[rs1];
-	fprintf(output, "0x%08x:csrrw %s,%s,%s %s=%s=0x%08x,%s=%s=0x%08x\n", *pc, x_label[rd], csr[c].x_label, x_label[rs1], x_label[rd], csr[c].x_label, csr[c].x, csr[c].x_label, x_label[rs1], x[rs1]);
-	x[rd] = csr[csr].x;
-	csr[csr].x = aux;
+	fprintf(output, "0x%08x:csrrw %s,%s,%s %s=%s=0x%08x,%s=%s=0x%08x\n", pc, x_label[rd], csr[c].x_label, x_label[rs1], x_label[rd], csr[c].x_label, csr[c].x, csr[c].x_label, x_label[rs1], x[rs1]);
+	x[rd] = csr[c].x;
+	csr[c].x = aux;
 }
-void csrrs(FILE *output, const uint8_t rd, const uint8_t rs1, uint16_t c, uint32_t *pc)
+void csrrs(FILE *output, const uint8_t rd, const uint8_t rs1, uint16_t c, uint32_t pc)
 {
 	uint32_t aux = x[rs1];
-	fprintf(output, "0x%08x:csrrw %s,%s,%s %s=%s=0x%08x,%s|=%s=0x%08x|0x%08x=0x%08x\n", *pc, x_label[rd], csr[c].x_label, x_label[rs1], x_label[rd], csr[c].x_label, csr[c].x, csr[c].x_label, x_label[rs1], x[rs1]);
-	x[rd] = csr[csr].x;
-	csr[csr].x = csr[csr].x | aux;
+	fprintf(output, "0x%08x:csrrs %s,%s,%s %s=%s=0x%08x,%s|=%s=0x%08x|0x%08x=0x%08x\n", pc, x_label[rd], csr[c].x_label, x_label[rs1], x_label[rd], csr[c].x_label, csr[c].x, csr[c].x_label, x_label[rs1], csr[c].x, aux, csr[c].x | aux);
+	x[rd] = csr[c].x;
+	csr[c].x = csr[c].x | aux;
+}
+void mret(FILE *output, uint32_t *pc)
+{
+	fprintf(output, "0x%08x:mret pc=0x%08x\n", *pc ,csr[3].x);
+	csr[0].x = 0x00000080;
+	*pc = csr[3].x-4;
+
+	
 }
 void Icsr(FILE *output, const uint32_t instruction, const uint8_t funct3, const int16_t imm, uint32_t *pc, char *prog, const uint8_t rd, const uint8_t rs1)
 {
+	uint16_t c = getcsr((uint16_t)(instruction >> 20));
 	if (funct3 == 0x0 && imm == 0x0)
 		ecall(output, *pc);
 	else if (funct3 == 0x0 && imm == 0x1)
 		ebreak(output, *pc);
 	else if (imm == 0b001100000010 && funct3 == 0 && rd == 0 && rs1 == 0)
-		mret(output, *pc);
+		mret(output, pc);
 	else
-		const uint16_t csr = getcsr((uint16_t)(instruction >> 20));
 		switch (funct3) {
 			case 0x1:
-				csrrw(output, rd, rs1, csr, *pc);
+				csrrw(output, rd, rs1, c, *pc);
 				break;
-			case 0x2
-				csrrs(output, rd, rs1, csr, *pc);
+			case 0x2:
+				csrrs(output, rd, rs1, c, *pc);
 				break;
 			case 0x3:
-				csrrc(output, rd, rs1, csr, *pc);
-				break;
+				//csrrc(output, rd, rs1, csr, *pc);
 			case 0x5:
-				csrrwi(output, rd, rs1, csr, *pc);
-				break;
+				//csrrwi(output, rd, rs1, csr, *pc);
 			case 0x6:
-				csrrsi(output, rd, rs1, csr, *pc);
-				break;
+				//csrrsi(output, rd, rs1, csr, *pc);
 			case 0x7:
-				csrrci(output, rd, rs1, csr, *pc);
+				// csrrci(output, rd, rs1, csr, *pc);
+				printf("csrs...\n");
 				break;
 			default:
 				fprintf(stderr, "%s: unknwon instruction %x\n", prog, instruction);
@@ -577,7 +620,7 @@ void I(FILE *output, const uint32_t instruction, uint8_t memory[], uint32_t *pc,
 			Iimm(output, instruction, funct3, rd, rs1, imm, *pc, prog);
 			return;
 		case 0b0000011:
-			Iload(output, instruction, funct3, memory, rd, rs1, imm, *pc, prog);
+			Iload(output, instruction, funct3, memory, rd, rs1, imm, pc, prog);
 			return;
 		case 0b1100111:
 			Ijump(output, instruction, funct3, rd, rs1, imm, pc, prog);
@@ -616,12 +659,45 @@ void S(FILE *output, const uint32_t instruction, uint8_t memory[], uint32_t pc, 
 
 	switch (funct3) {
 		case 0x0:
+			if (rs1 == 0) {	
+			//mstatus
+			csr[0].x = 0x00001800;
+			//mcause
+			csr[4].x = 0x5;
+			// pc = mtvec
+			pc = csr[2].x - 4;
+			fprintf(output, ">exception:store_fault cause=0x%08x,epc=0x%08x,tval=0x%08x\n", csr[4].x, csr[3].x, csr[5].x);
+			//tval = instruction
+			csr[5].x = simm;
+			} else
 			sb(output, rs1, rs2, simm, memory, pc);
 			break;
 		case 0x1:
+			if (rs1 == 0) {	
+			//mstatus
+			csr[0].x = 0x00001800;
+			//mcause
+			csr[4].x = 0x5;
+			// pc = mtvec
+			pc = csr[2].x - 4;
+			fprintf(output, ">exception:store_fault cause=0x%08x,epc=0x%08x,tval=0x%08x\n", csr[4].x, csr[3].x, csr[5].x);
+			//tval = instruction
+			csr[5].x = simm;
+			} else
 			sh(output, rs1, rs2, simm, memory, pc);
 			break;
 		case 0x2:
+			if (rs1 == 0) {	
+			//mstatus
+			csr[0].x = 0x00001800;
+			//mcause
+			csr[4].x = 0x5;
+			// pc = mtvec
+			pc = csr[2].x - 4;
+			fprintf(output, ">exception:store_fault cause=0x%08x,epc=0x%08x,tval=0x%08x\n", csr[4].x, csr[3].x, csr[5].x);
+			//tval = instruction
+			csr[5].x = simm;
+			} else
 			sw(output, rs1, rs2, simm, memory, pc);
 			break;
 		default:
@@ -663,6 +739,7 @@ void bge(FILE *output, const uint8_t rs1, const uint8_t rs2, const int32_t simm,
 {
 	uint32_t instAdress = *pc;
 	if (((int32_t)x[rs1]) >= ((int32_t)x[rs2]) && simm != 0x000)
+
 		*pc += simm << 1;
 	else
 		*pc += 4;
@@ -793,7 +870,16 @@ uint8_t writefile(FILE *output, uint8_t memory[], char *prog)
 				J(output, instruction, &pc, prog);
 				break;
 			default:
-				fprintf(stderr, "unknown opcode. %x\n", opcode);
+				//mstatus
+				csr[0].x = 0x00001800;
+				//mcause
+				csr[4].x = 0x1;
+				// pc = mtvec
+				pc = csr[2].x - 4;
+				fprintf(output, ">exception:instruction_fault cause=0x%08x,epc=0x%08x,tval=0x%08x\n", csr[4].x, csr[3].x, csr[5].x);
+				// mtval = instruction
+				csr[5].x = instruction;
+				printf("unknown opcode. %x\n", instruction);
 				break;
 		}
 		pc += 4;
